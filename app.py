@@ -11,7 +11,7 @@ users_online = set()
 blocks = {}
 rooms_messages = {}
 
-HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
+HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",r"\i will leaked your photos
                        r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
                        r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"]
 MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
