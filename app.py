@@ -1,38 +1,22 @@
-import re
-from datetime import datetime
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room
+from datetime import datetime
+import re
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")  # eventlet for Gunicorn
+app.config['SECRET_KEY'] = 'dev-secret'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# -----------------------------
-# Routes
-# -----------------------------
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-# -----------------------------
-# Data Stores
-# -----------------------------
 users_online = set()
 blocks = {}
 rooms_messages = {}
 
-HARASSMENT_PATTERNS = [
-    r"\bkill\b",
-    r"\bdie\b",
-    r"\bstupid\b",
-    r"\buseless\b",
-    r"i will leak(ed)? your photos"
-]
+HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
+                       r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
+                       r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"]
 MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
 WHITELIST_CONTEXT = [r"kill\s+the\s+process", r"kill\s+the\s+task", r"beat\s+the\s+record"]
 
-# -----------------------------
-# Helper Functions
-# -----------------------------
 def detect_harassment(text):
     t = text.lower()
     for w in WHITELIST_CONTEXT:
@@ -55,9 +39,14 @@ def detect_harassment(text):
 def room_id_for(a, b):
     return "::".join(sorted([a, b]))
 
-# -----------------------------
-# Socket.IO Events
-# -----------------------------
+@app.route("/")
+def home():
+    return render_template("home.html")
+
+@app.route("/chat")
+def chat():
+    return render_template("index.html")  # your WhatsApp-style chat page
+
 @socketio.on("register")
 def on_register(data):
     username = data.get("username", "").strip()
@@ -73,7 +62,7 @@ def on_register(data):
 def on_start_chat(data):
     a = data.get("from")
     b = data.get("to")
-    if not a or not b or a == b:
+    if not a or not b or a==b:
         emit("system", {"msg": "Choose a different user to chat."})
         return
     rid = room_id_for(a, b)
@@ -81,6 +70,8 @@ def on_start_chat(data):
     history = rooms_messages.get(rid, [])
     emit("chat_started", {"room": rid, "history": history})
 
+@socketio.on("send_message")
+@socketio.on("send_message")
 @socketio.on("send_message")
 def on_send_message(data):
     sender = data.get("from")
@@ -108,7 +99,9 @@ def on_send_message(data):
         emit("new_message", {"room": rid, "message": msg}, room=request.sid)
         return
 
+    # Send normally to both sender and receiver
     socketio.emit("new_message", {"room": rid, "message": msg}, room=rid)
+
 
 @socketio.on("block_user")
 def on_block_user(data):
@@ -130,8 +123,5 @@ def on_unblock_user(data):
     emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
     emit("system", {"msg": f"You unblocked {who}."})
 
-# -----------------------------
-# Entry Point (for local dev)
-# -----------------------------
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+if __name__=="__main__":
+    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
