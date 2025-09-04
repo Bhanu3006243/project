@@ -1,11 +1,8 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room
-from datetime import datetime
-import re
+from flask import Flask
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")  # 👈 force threading
 
 users_online = set()
 blocks = {}
