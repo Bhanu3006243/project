@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Silent Guardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+</head>
+<body>
+    <div class="home-container">
+        <!-- Logo Section -->
+        <div class="logo">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Silent Guardian Logo">
+        </div>
+
+        <!-- Title and Description -->
+        <h1>Silent Guardian</h1>
+        <p class="description">
+            Your real-time harassment detector chat assistant. 
+            Stay safe and communicate confidently.
+        </p>
+
+        <!-- Enter Chat Button -->
+        <a href="{{ url_for('chat') }}" class="enter-btn">Enter Chat</a>
+
+        <!-- Optional Features -->
+        <div class="features">
+            <h3>Features:</h3>
+            <ul>
+                <li>Detects harassment and abusive messages in real-time</li>
+                <li>Blocks/unblocks users</li>
+                <li>Safe, private, and interactive chat environment</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
