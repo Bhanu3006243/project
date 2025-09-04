@@ -42,6 +42,7 @@ def room_id_for(a, b):
 def index():
     return render_template("index.html")
 
+
 @socketio.on("register")
 def on_register(data):
     username = data.get("username", "").strip()
