@@ -1,8 +1,7 @@
-from flask import Flask
-from flask_socketio import SocketIO
-
-app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")  # 👈 force threading
+import re
+from datetime import datetime
+from flask import Flask, render_template, request   # 👈 added render_template
+from flask_socketio import SocketIO, emit, join_room
 
 users_online = set()
 blocks = {}
