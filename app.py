@@ -10,10 +10,13 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 users_online = set()
 blocks = {}
 rooms_messages = {}
-
-HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",r"\i will leaked your photos
-                       r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
-                       r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"]
+HARASSMENT_PATTERNS = [
+    r"\bkill\b",
+    r"\bdie\b",
+    r"\bstupid\b",
+    r"\buseless\b",
+    r"i will leak(ed)? your photos"
+]
 MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
 WHITELIST_CONTEXT = [r"kill\s+the\s+process", r"kill\s+the\s+task", r"beat\s+the\s+record"]
 
