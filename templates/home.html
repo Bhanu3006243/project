@@ -9,8 +9,11 @@
     <div class="home-container">
         <!-- Logo Section -->
         <div class="logo">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Silent Guardian Logo">
-        </div>
+    <img src="{{ url_for('static', filename='logo.png') }}" 
+         alt="Silent Guardian Logo" onerror="this.style.display='none'">
+</div>
+
+
 
         <!-- Title and Description -->
         <h1>Silent Guardian</h1>
