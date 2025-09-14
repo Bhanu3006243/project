@@ -122,6 +122,8 @@ def on_unblock_user(data):
     blocks.setdefault(me, set()).discard(who)
     emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
     emit("system", {"msg": f"You unblocked {who}."})
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)
 
-if __name__=="__main__":
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
