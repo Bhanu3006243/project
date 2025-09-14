@@ -1,7 +1,10 @@
-from flask import Flask, render_template
+import eventlet
+eventlet.monkey_patch()
+
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room
 from datetime import datetime
-import re
+import re, os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret'
@@ -11,9 +14,11 @@ users_online = set()
 blocks = {}
 rooms_messages = {}
 
-HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
-                       r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
-                       r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"]
+HARASSMENT_PATTERNS = [
+    r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
+    r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
+    r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"
+]
 MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
 WHITELIST_CONTEXT = [r"kill\s+the\s+process", r"kill\s+the\s+task", r"beat\s+the\s+record"]
 
@@ -45,7 +50,7 @@ def home():
 
 @app.route("/chat")
 def chat():
-    return render_template("index.html")  # your WhatsApp-style chat page
+    return render_template("index.html")
 
 @socketio.on("register")
 def on_register(data):
@@ -62,7 +67,7 @@ def on_register(data):
 def on_start_chat(data):
     a = data.get("from")
     b = data.get("to")
-    if not a or not b or a==b:
+    if not a or not b or a == b:
         emit("system", {"msg": "Choose a different user to chat."})
         return
     rid = room_id_for(a, b)
@@ -70,8 +75,6 @@ def on_start_chat(data):
     history = rooms_messages.get(rid, [])
     emit("chat_started", {"room": rid, "history": history})
 
-@socketio.on("send_message")
-@socketio.on("send_message")
 @socketio.on("send_message")
 def on_send_message(data):
     sender = data.get("from")
@@ -95,13 +98,10 @@ def on_send_message(data):
     rooms_messages.setdefault(rid, []).append(msg)
 
     if sender in blocks.get(receiver, set()):
-        # Only send to sender, not the blocked receiver
         emit("new_message", {"room": rid, "message": msg}, room=request.sid)
         return
 
-    # Send normally to both sender and receiver
     socketio.emit("new_message", {"room": rid, "message": msg}, room=rid)
-
 
 @socketio.on("block_user")
 def on_block_user(data):
@@ -122,8 +122,7 @@ def on_unblock_user(data):
     blocks.setdefault(me, set()).discard(who)
     emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
     emit("system", {"msg": f"You unblocked {who}."})
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
 
+if __name__ == "__main__":
+    PORT = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=PORT)
