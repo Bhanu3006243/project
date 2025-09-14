@@ -9,11 +9,9 @@
     <div class="home-container">
         <!-- Logo Section -->
         <div class="logo">
-    <img src="{{ url_for('static', filename='logo.png') }}" 
-         alt="Silent Guardian Logo" onerror="this.style.display='none'">
-</div>
-
-
+            <img src="{{ url_for('static', filename='logo.png') }}" 
+                 alt="Silent Guardian Logo" onerror="this.style.display='none'">
+        </div>
 
         <!-- Title and Description -->
         <h1>Silent Guardian</h1>
@@ -22,8 +20,11 @@
             Stay safe and communicate confidently.
         </p>
 
-        <!-- Enter Chat Button -->
-        <a href="{{ url_for('chat') }}" class="enter-btn">Enter Chat</a>
+        <!-- Login Section -->
+        <div class="login-container">
+            <input type="text" id="username" placeholder="Enter your username">
+            <button id="loginBtn">Enter Chat</button>
+        </div>
 
         <!-- Optional Features -->
         <div class="features">
@@ -35,5 +36,29 @@
             </ul>
         </div>
     </div>
+
+    <!-- SocketIO -->
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        document.getElementById("loginBtn").onclick = () => {
+            const username = document.getElementById("username").value.trim();
+            if (!username) return alert("Please enter a username");
+
+            // Emit register event to server
+            socket.emit("register", {username: username});
+
+            socket.on("register_response", (data) => {
+                if (data.ok) {
+                    // Save username to localStorage for chat page
+                    localStorage.setItem("username", data.username);
+                    window.location.href = "/chat";
+                } else {
+                    alert(data.error);
+                }
+            });
+        };
+    </script>
 </body>
 </html>
