@@ -7,6 +7,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
+
 <div id="login">
     <h2>Enter your username</h2>
     <input type="text" id="username" placeholder="Username">
@@ -37,6 +38,105 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='client.js') }}"></script>
+<script>
+const socket = io();
+
+let myUsername = null;
+
+// Login
+document.getElementById("btnLogin").onclick = () => {
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+        document.getElementById("loginError").innerText = "Username required!";
+        return;
+    }
+
+    socket.emit("register", {username});
+
+    socket.on("register_response", (data) => {
+        if (data.ok) {
+            myUsername = data.username;
+            document.getElementById("me").innerText = myUsername;
+            document.getElementById("login").style.display = "none";
+            document.getElementById("chatContainer").style.display = "flex";
+
+            // Populate online users
+            updateUsers(data.users);
+        } else {
+            document.getElementById("loginError").innerText = data.error;
+        }
+    });
+};
+
+// Update online users
+socket.on("users_update", (data) => {
+    updateUsers(data.users);
+});
+
+function updateUsers(users) {
+    const usersUl = document.getElementById("users");
+    usersUl.innerHTML = "";
+    users.forEach(u => {
+        if(u !== myUsername){
+            const li = document.createElement("li");
+            li.innerText = u;
+            li.onclick = () => startChatWith(u);
+            usersUl.appendChild(li);
+        }
+    });
+}
+
+let currentRoom = null;
+
+// Start chat
+function startChatWith(user) {
+    if (!myUsername) return;
+    socket.emit("start_chat", {from: myUsername, to: user});
+}
+
+socket.on("chat_started", (data) => {
+    currentRoom = data.room;
+    document.getElementById("talkingTo").innerText = data.room.split("::").filter(u => u !== myUsername)[0];
+    const messagesDiv = document.getElementById("messages");
+    messagesDiv.innerHTML = "";
+    data.history.forEach(msg => displayMessage(msg));
+});
+
+// Send message
+document.getElementById("btnSend").onclick = () => {
+    const text = document.getElementById("messageInput").value.trim();
+    if (!text || !currentRoom) return;
+
+    const receiver = currentRoom.split("::").filter(u => u !== myUsername)[0];
+
+    socket.emit("send_message", {from: myUsername, to: receiver, text});
+    document.getElementById("messageInput").value = "";
+};
+
+socket.on("new_message", (data) => {
+    if (data.room === currentRoom) {
+        displayMessage(data.message);
+    }
+});
+
+function displayMessage(msg) {
+    const messagesDiv = document.getElementById("messages");
+    const p = document.createElement("p");
+    p.innerHTML = `<b>${msg.from}</b>: ${msg.text} <i style="color:red">${msg.status !== "safe" ? "["+msg.status+"]" : ""}</i>`;
+    messagesDiv.appendChild(p);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Block/unblock
+document.getElementById("btnBlock").onclick = () => {
+    const who = document.getElementById("blockInput").value.trim();
+    if (who) socket.emit("block_user", {me: myUsername, who});
+};
+document.getElementById("btnUnblock").onclick = () => {
+    const who = document.getElementById("blockInput").value.trim();
+    if (who) socket.emit("unblock_user", {me: myUsername, who});
+};
+
+</script>
 </body>
 </html>
