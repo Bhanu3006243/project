@@ -1,48 +1,12 @@
-import eventlet
-eventlet.monkey_patch()
-
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room
-from datetime import datetime
-import re, os
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret'
+app.config['SECRET_KEY'] = "secret!"
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-users_online = set()
-blocks = {}
-rooms_messages = {}
-
-HARASSMENT_PATTERNS = [
-    r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
-    r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
-    r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"
-]
-MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
-WHITELIST_CONTEXT = [r"kill\s+the\s+process", r"kill\s+the\s+task", r"beat\s+the\s+record"]
-
-def detect_harassment(text):
-    t = text.lower()
-    for w in WHITELIST_CONTEXT:
-        if re.search(w, t):
-            return {"label": "safe", "severity": 0, "matches": []}
-    matches = []
-    severity = 0
-    for p in HARASSMENT_PATTERNS:
-        if re.search(p, t):
-            matches.append(p)
-            severity = max(severity, 2)
-    if not matches:
-        for p in MILD_PATTERNS:
-            if re.search(p, t):
-                matches.append(p)
-                severity = max(severity, 1)
-    label = "harassment" if matches else "safe"
-    return {"label": label, "severity": severity, "matches": matches}
-
-def room_id_for(a, b):
-    return "::".join(sorted([a, b]))
+# store online users
+online_users = set()
 
 @app.route("/")
 def home():
@@ -52,77 +16,39 @@ def home():
 def chat():
     return render_template("index.html")
 
-@socketio.on("register")
-def on_register(data):
-    username = data.get("username", "").strip()
-    if not username:
-        emit("register_response", {"ok": False, "error": "Username required"})
-        return
-    users_online.add(username)
-    blocks.setdefault(username, set())
-    emit("register_response", {"ok": True, "username": username, "users": sorted(users_online)})
-    socketio.emit("users_update", {"users": sorted(users_online)})
+# WebSocket events
+@socketio.on("connect")
+def handle_connect():
+    emit("system", {"msg": "A user connected."}, broadcast=True)
 
-@socketio.on("start_chat")
-def on_start_chat(data):
-    a = data.get("from")
-    b = data.get("to")
-    if not a or not b or a == b:
-        emit("system", {"msg": "Choose a different user to chat."})
-        return
-    rid = room_id_for(a, b)
-    join_room(rid)
-    history = rooms_messages.get(rid, [])
-    emit("chat_started", {"room": rid, "history": history})
+@socketio.on("login")
+def handle_login(username):
+    if username in online_users:
+        emit("loginError", "Username already taken")
+    else:
+        online_users.add(username)
+        emit("loginSuccess", username)
+        emit("updateUsers", list(online_users), broadcast=True)
 
-@socketio.on("send_message")
-def on_send_message(data):
-    sender = data.get("from")
-    receiver = data.get("to")
-    text = data.get("text", "").strip()
-    if not sender or not receiver or not text:
-        return
+@socketio.on("disconnect")
+def handle_disconnect():
+    # Remove user on disconnect
+    # (In real case, you’d track sessions to remove correctly)
+    emit("system", {"msg": "A user disconnected."}, broadcast=True)
 
-    analysis = detect_harassment(text)
-    rid = room_id_for(sender, receiver)
-    msg = {
-        "from": sender,
-        "to": receiver,
-        "text": text,
-        "status": analysis["label"],
-        "severity": analysis["severity"],
-        "matches": analysis["matches"],
-        "ts": datetime.utcnow().isoformat() + "Z"
-    }
+@socketio.on("chatMessage")
+def handle_message(data):
+    # data: {text: "...", to: "username" (optional)}
+    msg = data.get("text")
+    emit("newMessage", {"msg": msg}, broadcast=True)
 
-    rooms_messages.setdefault(rid, []).append(msg)
+@socketio.on("blockUser")
+def handle_block(target):
+    emit("system", {"msg": f"You blocked {target}"})
 
-    if sender in blocks.get(receiver, set()):
-        emit("new_message", {"room": rid, "message": msg}, room=request.sid)
-        return
-
-    socketio.emit("new_message", {"room": rid, "message": msg}, room=rid)
-
-@socketio.on("block_user")
-def on_block_user(data):
-    me = data.get("me")
-    who = data.get("who")
-    if not me or not who:
-        return
-    blocks.setdefault(me, set()).add(who)
-    emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
-    emit("system", {"msg": f"You blocked {who}."})
-
-@socketio.on("unblock_user")
-def on_unblock_user(data):
-    me = data.get("me")
-    who = data.get("who")
-    if not me or not who:
-        return
-    blocks.setdefault(me, set()).discard(who)
-    emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
-    emit("system", {"msg": f"You unblocked {who}."})
+@socketio.on("unblockUser")
+def handle_unblock(target):
+    emit("system", {"msg": f"You unblocked {target}"})
 
 if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=PORT)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
