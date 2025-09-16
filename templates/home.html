@@ -7,58 +7,23 @@
 </head>
 <body>
     <div class="home-container">
-        <!-- Logo Section -->
+        <!-- Logo -->
         <div class="logo">
-            <img src="{{ url_for('static', filename='logo.png') }}" 
-                 alt="Silent Guardian Logo" onerror="this.style.display='none'">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Silent Guardian Logo">
         </div>
 
-        <!-- Title and Description -->
         <h1>Silent Guardian</h1>
-        <p class="description">
-            Your real-time harassment detector chat assistant. 
-            Stay safe and communicate confidently.
-        </p>
+        <p class="description">Your real-time harassment detector chat assistant.</p>
+        <a href="{{ url_for('chat') }}" class="enter-btn">Enter Chat</a>
 
-        <!-- Login Section -->
-        <div class="login-container">
-            <input type="text" id="username" placeholder="Enter your username">
-            <button id="loginBtn">Enter Chat</button>
-        </div>
-
-        <!-- Optional Features -->
         <div class="features">
             <h3>Features:</h3>
             <ul>
-                <li>Detects harassment and abusive messages in real-time</li>
+                <li>Detects harassment in real-time</li>
                 <li>Blocks/unblocks users</li>
-                <li>Safe, private, and interactive chat environment</li>
+                <li>Safe and interactive chat environment</li>
             </ul>
         </div>
     </div>
-
-    <!-- SocketIO -->
-    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
-    <script>
-        const socket = io();
-
-        document.getElementById("loginBtn").onclick = () => {
-            const username = document.getElementById("username").value.trim();
-            if (!username) return alert("Please enter a username");
-
-            // Emit register event to server
-            socket.emit("register", {username: username});
-
-            socket.on("register_response", (data) => {
-                if (data.ok) {
-                    // Save username to localStorage for chat page
-                    localStorage.setItem("username", data.username);
-                    window.location.href = "/chat";
-                } else {
-                    alert(data.error);
-                }
-            });
-        };
-    </script>
 </body>
 </html>
