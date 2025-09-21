@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room
 from datetime import datetime
 import re
@@ -98,7 +98,6 @@ def handle_block_user(data):
     if not me or not who:
         return
     blocks.setdefault(me, set()).add(who)
-    # Silent: only notify blocker
     emit("system", {"msg": f"You have blocked {who}."}, room=request.sid)
 
 @socketio.on("unblock_user")
@@ -111,4 +110,4 @@ def handle_unblock_user(data):
     emit("system", {"msg": f"You have unblocked {who}."}, room=request.sid)
 
 if __name__=="__main__":
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+    socketio.run(app, host="127.0.0.1", port=5001, debug=True)
