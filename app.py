@@ -72,7 +72,6 @@ def handle_send_message(data):
     if not sender or not receiver or not text:
         return
 
-    # ---------- BLOCK ENFORCEMENT ----------
     if sender in blocks.get(receiver, set()):
         emit("system", {"msg": f"You are blocked by {receiver}. Cannot send message."}, room=request.sid)
         return
@@ -90,7 +89,6 @@ def handle_send_message(data):
     rooms_messages.setdefault(rid, []).append(msg)
     socketio.emit("new_message", {"room": rid, "message": msg}, room=rid)
 
-# ---------------- Block / Unblock ----------------
 @socketio.on("block_user")
 def handle_block_user(data):
     me = data.get("me")
@@ -110,4 +108,5 @@ def handle_unblock_user(data):
     emit("system", {"msg": f"You have unblocked {who}."}, room=request.sid)
 
 if __name__=="__main__":
-    socketio.run(app, host="127.0.0.1", port=5001, debug=True)
+    # Use default port 5000 for simplicity
+    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
