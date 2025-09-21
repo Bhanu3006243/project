@@ -1,19 +1,49 @@
-        <div id="inputArea">
-            <input type="text" id="messageInput" placeholder="Type a message...">
-            <button id="btnSend">Send</button>
-        </div>
-        <div id="blockControls">
-            <input type="text" id="blockInput" placeholder="Username to block/unblock">
-            <button id="btnBlock">Block</button>
-            <button id="btnUnblock">Unblock</button>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Silent Guardian Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Login -->
+    <div id="login">
+        <h2>Enter your username</h2>
+        <input type="text" id="username" placeholder="Username">
+        <button id="btnLogin">Join Chat</button>
+        <div class="error" id="loginError"></div>
     </div>
-    <div id="usersList">
-        <h3>Online Users</h3>
-        <ul id="users"></ul>
-    </div>
-</div>
 
-<script src="{{ url_for('static', filename='client.js') }}"></script>
+    <!-- Chat -->
+    <div id="chatContainer" style="display:none;">
+        <div id="chatRoom">
+            <div id="chatHeader">
+                <span id="me"></span>
+                <span id="talkingTo"></span>
+                <button id="disconnectBtn">Disconnect</button>
+            </div>
+
+            <div id="messages"></div>
+
+            <div id="inputArea">
+                <input type="text" id="messageInput" placeholder="Type a message...">
+                <button id="btnSend">Send</button>
+            </div>
+
+            <div id="blockControls">
+                <input type="text" id="blockInput" placeholder="Username to block/unblock">
+                <button id="btnBlock">Block</button>
+                <button id="btnUnblock">Unblock</button>
+            </div>
+        </div>
+
+        <div id="usersList">
+            <h3>Online Users</h3>
+            <ul id="users"></ul>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='client.js') }}"></script>
 </body>
 </html>
