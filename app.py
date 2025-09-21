@@ -8,47 +8,41 @@ app.config['SECRET_KEY'] = 'dev-secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 users_online = set()
-blocks = {}
-rooms_messages = {}
+blocks = {}            # {user: set(blocked_users)}
+rooms_messages = {}    # {room_id: [messages]}
 
-HARASSMENT_PATTERNS = [r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
-                       r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
-                       r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"]
-MILD_PATTERNS = [r"\bdumb\b", r"\bnoob\b", r"\bscrew\s*you\b"]
-WHITELIST_CONTEXT = [r"kill\s+the\s+process", r"kill\s+the\s+task", r"beat\s+the\s+record"]
+HARASSMENT_PATTERNS = [
+    r"\bkill\b", r"\bdie\b", r"\bstupid\b", r"\buseless\b",
+    r"\bidiot\b", r"\bworthless\b", r"\bslap\b", r"\bbeat\b",
+    r"\bhate\b", r"\bshut\s*up\b", r"\bgo\s*to\s*hell\b"
+]
 
 def detect_harassment(text):
     t = text.lower()
-    for w in WHITELIST_CONTEXT:
-        if re.search(w, t):
-            return {"label": "safe", "severity": 0, "matches": []}
     matches = []
     severity = 0
     for p in HARASSMENT_PATTERNS:
         if re.search(p, t):
             matches.append(p)
-            severity = max(severity, 2)
-    if not matches:
-        for p in MILD_PATTERNS:
-            if re.search(p, t):
-                matches.append(p)
-                severity = max(severity, 1)
+            severity = 2
     label = "harassment" if matches else "safe"
     return {"label": label, "severity": severity, "matches": matches}
 
 def room_id_for(a, b):
     return "::".join(sorted([a, b]))
 
+# ---------------- Routes ----------------
 @app.route("/")
 def home():
     return render_template("home.html")
 
 @app.route("/chat")
 def chat():
-    return render_template("index.html")  # your WhatsApp-style chat page
+    return render_template("index.html")
 
+# ---------------- Socket.IO ----------------
 @socketio.on("register")
-def on_register(data):
+def handle_register(data):
     username = data.get("username", "").strip()
     if not username:
         emit("register_response", {"ok": False, "error": "Username required"})
@@ -59,10 +53,10 @@ def on_register(data):
     socketio.emit("users_update", {"users": sorted(users_online)})
 
 @socketio.on("start_chat")
-def on_start_chat(data):
+def handle_start_chat(data):
     a = data.get("from")
     b = data.get("to")
-    if not a or not b or a==b:
+    if not a or not b or a == b:
         emit("system", {"msg": "Choose a different user to chat."})
         return
     rid = room_id_for(a, b)
@@ -71,13 +65,16 @@ def on_start_chat(data):
     emit("chat_started", {"room": rid, "history": history})
 
 @socketio.on("send_message")
-@socketio.on("send_message")
-@socketio.on("send_message")
-def on_send_message(data):
+def handle_send_message(data):
     sender = data.get("from")
     receiver = data.get("to")
     text = data.get("text", "").strip()
     if not sender or not receiver or not text:
+        return
+
+    # ---------- BLOCK ENFORCEMENT ----------
+    if sender in blocks.get(receiver, set()):
+        emit("system", {"msg": f"You are blocked by {receiver}. Cannot send message."}, room=request.sid)
         return
 
     analysis = detect_harassment(text)
@@ -87,41 +84,31 @@ def on_send_message(data):
         "to": receiver,
         "text": text,
         "status": analysis["label"],
-        "severity": analysis["severity"],
-        "matches": analysis["matches"],
-        "ts": datetime.utcnow().isoformat() + "Z"
+        "ts": datetime.utcnow().strftime("%H:%M:%S")
     }
 
     rooms_messages.setdefault(rid, []).append(msg)
-
-    if sender in blocks.get(receiver, set()):
-        # Only send to sender, not the blocked receiver
-        emit("new_message", {"room": rid, "message": msg}, room=request.sid)
-        return
-
-    # Send normally to both sender and receiver
     socketio.emit("new_message", {"room": rid, "message": msg}, room=rid)
 
-
+# ---------------- Block / Unblock ----------------
 @socketio.on("block_user")
-def on_block_user(data):
+def handle_block_user(data):
     me = data.get("me")
     who = data.get("who")
     if not me or not who:
         return
     blocks.setdefault(me, set()).add(who)
-    emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
-    emit("system", {"msg": f"You blocked {who}."})
+    # Silent: only notify blocker
+    emit("system", {"msg": f"You have blocked {who}."}, room=request.sid)
 
 @socketio.on("unblock_user")
-def on_unblock_user(data):
+def handle_unblock_user(data):
     me = data.get("me")
     who = data.get("who")
     if not me or not who:
         return
     blocks.setdefault(me, set()).discard(who)
-    emit("block_list", {"me": me, "blocked": sorted(list(blocks[me]))})
-    emit("system", {"msg": f"You unblocked {who}."})
+    emit("system", {"msg": f"You have unblocked {who}."}, room=request.sid)
 
 if __name__=="__main__":
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+    socketio.run(app, host="127.0.0.1", port=5001, debug=True)
